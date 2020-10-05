@@ -1,0 +1,266 @@
+
+global main " "
+global output "$main/output"
+global input "$main/input"
+
+* Di Tella, R., & Schargrodsky, E. (2004). Do police reduce crime? Estimates using the allocation of police forces after a terrorist attack. American Economic Review, 94(1), 115-133.
+
+*****************************
+***      Table 2          ***
+*****************************
+* Column A
+
+use "$input/crime.dta", clear
+
+drop if month==72 | month==73
+gen cartheftA = cartheft if dist>2  
+tabstat cartheftA, by(month) stat(mean n sd) save 
+matrix A = (r(Stat1)\r(Stat2)\r(Stat3)\r(Stat4)\r(Stat5)\r(Stat6)\r(Stat7)\r(Stat8)\r(Stat9))
+
+
+* Column B
+gen cartheftB = cartheft if inst==1 
+tabstat cartheftB, by(month) stat(mean n sd) save
+matrix B = (r(Stat1)\r(Stat2)\r(Stat3)\r(Stat4)\r(Stat5)\r(Stat6)\r(Stat7)\r(Stat8)\r(Stat9))
+matrix C= (A,B)
+
+
+* Column C
+gen cartheftC = cartheft if dist==1 
+tabstat cartheftC, by(month) stat(mean n sd) save
+matrix B = (r(Stat1)\r(Stat2)\r(Stat3)\r(Stat4)\r(Stat5)\r(Stat6)\r(Stat7)\r(Stat8)\r(Stat9))
+matrix C= (C,B)
+
+
+* Column D
+gen cartheftD = cartheft if dist==2 
+tabstat cartheftD, by(month) stat(mean n sd) save
+matrix B = (r(Stat1)\r(Stat2)\r(Stat3)\r(Stat4)\r(Stat5)\r(Stat6)\r(Stat7)\r(Stat8)\r(Stat9))
+matrix C= (C,B)
+
+
+* Column E
+* New variables
+bysort month: egen mean_A=mean(cartheft) if dist>2
+gsort month -mean_A
+bysort month: replace mean_A = mean_A[_n-1] /*
+     */if missing(mean_A) & _n > 1
+
+bysort month: egen mean_B=mean(cartheft) if inst==1 
+gsort month -mean_B 
+bysort month: replace mean_B = mean_B[_n-1] /*
+     */if missing(mean_B) & _n > 1
+
+bysort month: egen mean_C=mean(cartheft) if dist==1 
+gsort month -mean_C 
+bysort month: replace mean_C = mean_C[_n-1]/*
+     */ if missing(mean_C) & _n > 1
+
+bysort month: egen mean_D=mean(cartheft) if dist==2 
+gsort month -mean_D
+bysort month: replace mean_D = mean_D[_n-1] /*
+     */if missing(mean_D) & _n > 1
+
+gen cartheftE = mean_B-mean_A
+tabstat cartheftE, by(month) stat(mean n sd) save
+matrix B = (r(Stat1)\r(Stat2)\r(Stat3)\r(Stat4)\r(Stat5)\r(Stat6)\r(Stat7)\r(Stat8)\r(Stat9))
+matrix C= (C,B)
+
+* Column F
+gen cartheftF = mean_C-mean_A
+tabstat cartheftF, by(month) stat(mean n sd) save
+matrix B = (r(Stat1)\r(Stat2)\r(Stat3)\r(Stat4)\r(Stat5)\r(Stat6)\r(Stat7)\r(Stat8)\r(Stat9))
+matrix C= (C,B)
+
+
+* Column G
+gen cartheftG = mean_D-mean_A
+tabstat cartheftG, by(month) stat(mean n sd) save
+matrix B = (r(Stat1)\r(Stat2)\r(Stat3)\r(Stat4)\r(Stat5)\r(Stat6)\r(Stat7)\r(Stat8)\r(Stat9))
+matrix C= (C,B)
+matselrc C Table2, row(1,3,4,6,7,9,10,12,13,15,16,18,19,21,22,24,25,27) col(1,2,3,4,5,6,7)
+
+* Column and row names
+matrix colnames Table2 = A B C D E F G
+matrix rownames Table2 = April sd May sd June sd August sd July sd September sd October sd November sd December sd
+
+
+* Tex file
+esttab matrix(Table2) using Table2, tex replace
+*****************************
+***      Table A1         ***
+*****************************
+use "$input/crime.dta", clear
+
+* First row
+egen tag = tag(blockid barrio)
+egen distinct = total(tag), by(barrio) 
+tabstat distinct, by(barrio) save
+matrix A= (r(Stat1) ,r(Stat2) ,r(Stat3),r(Stat1) +r(Stat2)+r(Stat3))
+
+
+* Second row
+tabstat inst if month==4, statistics(sum) by(barrio) save
+matrix B= (r(Stat1), r(Stat3), r(Stat2),r(Stat1) +r(Stat2)+r(Stat3))
+matrix C= A\B
+
+* Third row
+tabstat cartheft, statistics(sum) by(barrio) save
+matrix A= (r(Stat1), r(Stat3), r(Stat2),r(Stat1) +r(Stat2)+r(Stat3))
+matrix C= C\A
+
+tabstat cartheft if inlist(month,4,5,6,7), statistics(sum) by(barrio) save
+matrix A= (r(Stat1), r(Stat3), r(Stat2),r(Stat1) +r(Stat2)+r(Stat3))
+matrix C= C\A
+
+tabstat cartheft if inlist(month,72,73), statistics(sum) by(barrio) save
+matrix A= (r(Stat1), r(Stat3), r(Stat2),r(Stat1) +r(Stat2)+r(Stat3))
+matrix C= C\A
+
+tabstat cartheft if inlist(month,8,9,10,11,12), statistics(sum) by(barrio) save
+matrix A= (r(Stat1), r(Stat3), r(Stat2),r(Stat1) +r(Stat2)+r(Stat3))
+matrix TableA1= C\A
+
+* Matrix colunm and row names
+matrix colnames TableA1 = Belgrano VillaCrespo Once Total
+matrix rownames TableA1 = Blocks InstitutionsInside CarThefts /*
+     */ April_1_july_17 July_18_July_31 August_1_Decembre_31
+mat list TableA1
+
+* Tex file
+esttab matrix(TableA1) using A1, tex replace
+
+
+
+*****************************
+***      Figure 2         ***
+*****************************
+
+use "$input/crime.dta", clear
+
+drop if month==72 | month==73
+
+
+* Creating means
+
+bysort month: egen mean1=mean(cartheft) if dist>2
+bysort month: egen mean2=mean(cartheft) if inst==1
+bysort month: egen mean3=mean(cartheft) if dist==1
+bysort month: egen mean4=mean(cartheft) if dist==2
+
+
+bysort post: egen mean1time = mean(mean1)
+bysort post: egen mean2time = mean(mean2)
+bysort post: egen mean3time = mean(mean3)
+bysort post: egen mean4time = mean(mean4)
+
+
+* Labels
+
+label variable mean1 "More than two blocks from nearest Jewish institution"
+label variable mean2 "Jewish institution on the block"
+label variable mean3 "One block from nearest Jewish institution"
+label variable mean4 "Two blocks from nearest Jewish institution"
+
+label variable mean1time "Pre and Post Means for More than two blocks from nearest Jewish institution"
+label variable mean2time "Pre and Post Means for Jewish institution on the block"
+label variable mean3time "Pre and Post Means for One block from nearest Jewish institution"
+label variable mean4time "Pre and Post Means for Two blocks from nearest Jewish institution"
+
+* Graph
+twoway (line mean1  month , yaxis(1) ) (line  mean2 month, yaxis(1) color(red%30)   ) (line  mean3 month, yaxis(1) color(blue%30)  ) (line  mean4 month, yaxis(1) color(green%30)  ) (scatter mean1time   month, yaxis(2) xline(7.58, lwidth(0.7)  lcolor(black)) xline(8, lwidth(0.7) lcolor(black) )) (scatter mean2time month ,   yaxis(2) )  (scatter mean3time month, yaxis(2) ) (scatter mean4time month,  yaxis(2) ), legend(label() cols(1) size(small)) ylab(,nogrid)
+
+* Export
+graph export figure2.png, replace
+
+
+
+*****************************
+***      Table 3          ***
+*****************************
+
+use "$input/crime.dta", clear
+
+
+drop if month==72 | month==73
+
+* Labels
+label variable instp "Same-Block Police"
+label variable inst1p "One-Block Police"
+
+* Column A
+areg cartheft instp month5-month12, absorb(blockid) robust
+outreg2 using regditella, tex replace label drop(month5-month12) 
+
+* Column B
+areg cartheft instp inst1p month5-month12, absorb(blockid) robust
+outreg2 using regditella, tex append label drop(month5-month12) 
+
+* Column C
+gen TwoBlocks = 0
+replace TwoBlocks = 1 if (post==1 & dist==2)
+label variable TwoBlocks "Two-Blocks Police"
+
+areg cartheft instp inst1p TwoBlocks month5-month12, absorb(blockid) robust
+outreg2 using regditella, tex append label drop(month5-month12) 
+
+* Column D 
+reg cartheft instp inst1p TwoBlocks month9-month12 if month>7, robust
+outreg2 using regditella, tex append label drop(month9-month12) 
+
+
+* Column  E
+areg cartheft instp inst1p TwoBlocks if dist<=2, absorb(blockid) robust
+outreg2 using regditella, tex append label  
+
+
+
+*****************************
+***      Table 7          ***
+*****************************
+
+
+use "$input/crime.dta", clear
+
+* Drop observations not used in the paper
+drop if month==72 | month==73
+
+* New variables 
+gen TwoBlocks = 0
+replace TwoBlocks = 1 if (post==1 & dist==2)
+
+gen Protectionbank =0
+replace Protectionbank=1 if bank==1 
+gen Protectionpublic =0
+replace Protectionpublic=1 if public==1 
+
+gen Protectionstation =0
+replace Protectionstation=1 if station==1 
+
+gen Protectionall =0
+gen all=1 if bank==1 | public==1 | station==1
+replace Protectionall=1 if all==1
+
+* Interactions
+foreach var of varlist public station bank all {
+	gen instp_protec`var' = instp*Protection`var'
+	label var instp_protec`var' "Same-Block Police X Protection `var'"
+	gen instp_noprotect`var' = instp*(1-Protection`var')
+	label var instp_noprotect`var' "Same-Block Police X (1- Protection `var')"
+	gen inst1p_protect`var' = inst1p*Protection`var' 
+	label var inst1p_protect`var' "One-Block Police X Protection `var'"
+	gen inst1p_noprotect`var' =  inst1p*(1-Protection`var')
+	label var inst1p_noprotect`var' "One-Block Police X (1- Protection `var')"
+	gen TwoBlocks_protect`var' = TwoBlocks*Protection`var'
+	label var TwoBlocks_protect`var' "Two-Blocks Police X Protection `var'"
+	gen TwoBlocks_noprotect`var' =TwoBlocks*(1-Protection`var')
+	label var TwoBlocks_noprotect`var' "Two-Blocks Police X (1- Protection `var')"
+}
+
+* Regression
+
+
+foreach var of varlist bank public station all{ 
+areg cartheft instp_noprotect`var'  instp_protec`var'  inst1p_noprotect`var'  inst1p_protect`var'  TwoBlocks_noprotect`var' TwoBlocks_protect`var' month5-month12, absorb(blockid) robust
+outreg2 using regditella7, tex append label  drop(month5-month12) addstat(F test, e(p))
+}
